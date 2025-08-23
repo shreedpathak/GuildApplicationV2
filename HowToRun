@@ -1,0 +1,7 @@
+Go to Backend Folder:
+- run 'npm install' to install all dependencies
+- run 'npm run dev' to start the server
+
+Go to Frontend Folder in another terminal:
+- run 'npm install' to install all dependencies
+- run 'npm run dev' to start the server

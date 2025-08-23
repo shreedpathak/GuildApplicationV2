@@ -1,0 +1,67 @@
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+*.log
+logs/
+*.out
+
+# Build files
+dist/
+build/
+*.class
+*.o
+*.exe
+*.dll
+
+# Environment files
+.env
+.env.*
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# macOS
+*.DS_Store
+
+# Windows
+*.lnk
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# Git files
+*.orig
+
+# React / Next.js / Create React App
+.cache/
+*.tsbuildinfo
+*.webmanifest
+coverage/
+public/static/
+out/
+
+# Others
+*.zip
+*.tar
+*.gz
+*.tgz
+
+# Optional: ignore your own backups
+*~
