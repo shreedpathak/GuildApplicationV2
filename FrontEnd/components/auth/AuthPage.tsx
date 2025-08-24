@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import axios from 'axios'; // ⬅️ import axios
+import { 
+  Card, CardContent, CardDescription, CardHeader, CardTitle 
+} from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -18,6 +21,8 @@ export function AuthPage({ onAuth }: AuthPageProps) {
     phone: '',
     password: '',
   });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -30,6 +35,63 @@ export function AuthPage({ onAuth }: AuthPageProps) {
         name: formData.name,
         role: selectedRole,
       });
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!loginForm.email || !loginForm.password) {
+      alert("Please enter email and password");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await axios.post("http://localhost:3000/api/auth/login", loginForm);
+
+      const { token, user } = res.data;
+
+      // save token + user in localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // call parent callback
+      onAuth(user);
+
+      alert("Login successful!");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 Signup request to backend
+  const handleSignup = async () => {
+    if (!selectedRole || !formData.name || !formData.email || !formData.password) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await axios.post("http://localhost:3000/api/auth/signup", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: selectedRole,
+      });
+
+      // Save token (optional: localStorage/sessionStorage)
+      localStorage.setItem("token", res.data.token);
+
+      // Call parent onAuth with returned user
+      onAuth(res.data.user);
+
+      alert("Signup successful!");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,6 +156,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
             <TabsTrigger value="sign-in">Sign In</TabsTrigger>
           </TabsList>
 
+          {/* Role Selection + Signup Form */}
           <TabsContent value="role-selection" className="mt-8">
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <RoleCard
@@ -194,16 +257,18 @@ export function AuthPage({ onAuth }: AuthPageProps) {
 
                   <Button 
                     className="w-full" 
-                    onClick={handleAuth}
-                    disabled={!formData.name || !formData.email}
+                    onClick={handleSignup}
+                    disabled={loading}
                   >
-                    Create Account as {selectedRole === 'helper' ? 'Helper' : 'Help Seeker'}
+                    {loading ? "Creating account..." : `Create Account as ${selectedRole === 'helper' ? 'Helper' : 'Help Seeker'}`}
                   </Button>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
+          {/* Sign In (can wire up later) */}
+          {/* Sign In */}
           <TabsContent value="sign-in" className="mt-8">
             <Card className="max-w-md mx-auto">
               <CardHeader>
@@ -220,6 +285,8 @@ export function AuthPage({ onAuth }: AuthPageProps) {
                       type="email"
                       placeholder="Enter your email"
                       className="pl-10"
+                      value={loginForm.email}
+                      onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                     />
                   </div>
                 </div>
@@ -233,12 +300,16 @@ export function AuthPage({ onAuth }: AuthPageProps) {
                       type="password"
                       placeholder="Enter your password"
                       className="pl-10"
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <Button className="w-full">Sign In</Button>
-                
+                <Button className="w-full" onClick={handleLogin} disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+
                 <div className="text-center">
                   <Button variant="link" className="text-sm">
                     Forgot your password?
