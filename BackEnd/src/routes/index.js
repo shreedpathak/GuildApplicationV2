@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { request } from 'express';
 
 import authRoutes from './authRoutes.js';
 import helperRoutes from './helperRoutes.js';
@@ -6,6 +6,7 @@ import neederRoutes from './neederRoutes.js';
 import areaRoutes from './areaRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
 import skillRoutes from './skillRoutes.js';
+import requestsRoutes from './requestsRoutes.js';
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/needers', neederRoutes);
 router.use('/api', areaRoutes);
 router.use('/category', categoryRoutes);
 router.use('/skill', skillRoutes);
+router.use('/request', requestsRoutes);
 
 export default router;

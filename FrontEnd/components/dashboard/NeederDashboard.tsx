@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -13,7 +14,7 @@ import {
   Clock, 
   Star, 
   DollarSign, 
-  CheckCircle, 
+  CheckCircle,  
   Heart,
   AlertCircle,
   MessageCircle,
@@ -30,6 +31,11 @@ interface User {
   role: 'helper' | 'needer';
 }
 
+interface Category {
+  _id: string;
+  name: string;
+}
+
 interface NeederDashboardProps {
   user: User;
   onLogout: () => void;
@@ -41,7 +47,7 @@ interface HelpRequest {
   description: string;
   category: string;
   location: string;
-  urgency: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high';
   budget?: number;
   postedTime: string;
   status: 'pending' | 'matched' | 'in-progress' | 'completed';
@@ -51,6 +57,7 @@ interface HelpRequest {
     rating: number;
     phone: string;
   };
+  requester?: User | string;
 }
 
 const mockUserRequests: HelpRequest[] = [
@@ -60,7 +67,7 @@ const mockUserRequests: HelpRequest[] = [
     description: 'Kitchen sink is leaking and needs immediate attention. Looking for a qualified plumber.',
     category: 'Home Repair',
     location: 'Downtown Area',
-    urgency: 'high',
+    priority: 'high',
     budget: 200,
     postedTime: '1 hour ago',
     status: 'matched',
@@ -76,7 +83,7 @@ const mockUserRequests: HelpRequest[] = [
     description: 'Need someone to walk my dog daily for the next two weeks while I recover from surgery.',
     category: 'Pet Care',
     location: 'Midtown',
-    urgency: 'medium',
+    priority: 'medium',
     budget: 25,
     postedTime: '3 days ago',
     status: 'pending',
@@ -87,7 +94,7 @@ const mockUserRequests: HelpRequest[] = [
     description: 'Looking for a math tutor for my high school daughter. Algebra II and Geometry.',
     category: 'Education',
     location: 'Westside',
-    urgency: 'low',
+    priority: 'low',
     budget: 40,
     postedTime: '1 week ago',
     status: 'completed',
@@ -103,39 +110,56 @@ export function NeederDashboard({ user, onLogout }: NeederDashboardProps) {
   const [activeTab, setActiveTab] = useState('requests');
   const [userRequests, setUserRequests] = useState(mockUserRequests);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [newRequest, setNewRequest] = useState({
     title: '',
     description: '',
     category: '',
     location: '',
-    urgency: 'medium' as const,
+    priority: 'medium' as const,
     budget: '',
+    requester: user.id,
   });
 
-  const handleCreateRequest = () => {
-    if (newRequest.title && newRequest.description && newRequest.category) {
-      const request: HelpRequest = {
-        id: Date.now().toString(),
-        title: newRequest.title,
-        description: newRequest.description,
-        category: newRequest.category,
-        location: newRequest.location || 'Not specified',
-        urgency: newRequest.urgency,
-        budget: newRequest.budget ? parseInt(newRequest.budget) : undefined,
-        postedTime: 'Just now',
-        status: 'pending',
-      };
-      
-      setUserRequests(prev => [request, ...prev]);
+    useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get<Category[]>("http://localhost:3000/api/category");
+        setCategories(res.data);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCreateRequest = async () => {
+  if (newRequest.title && newRequest.description && newRequest.category) {
+    try {
+      console.log("Creating request with data:", { ...newRequest, requester: user.id });
+      const res = await axios.post("http://localhost:3000/api/request/createRequest", {
+        ...newRequest,
+        requester: user.id, // ✅ send current logged-in user as requester
+      });
+
+      // Add the created request returned from backend
+      setUserRequests(prev => [res.data.request, ...prev]);
+
+      // Reset form
       setNewRequest({
-        title: '',
-        description: '',
-        category: '',
-        location: '',
-        urgency: 'medium',
-        budget: '',
+        title: "",
+        description: "",
+        category: "",
+        location: "",
+        priority: "medium",
+        budget: "",
+        requester: user.id,
       });
       setIsCreateDialogOpen(false);
+      } catch (err) {
+        console.error("Failed to create request:", err);
+      }
     }
   };
 
@@ -162,8 +186,8 @@ export function NeederDashboard({ user, onLogout }: NeederDashboardProps) {
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
+  const getUrgencyColor = (priority: string) => {
+    switch (priority) {
       case 'high': return 'bg-red-100 text-red-800 border-red-200';
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low': return 'bg-green-100 text-green-800 border-green-200';
@@ -182,8 +206,8 @@ export function NeederDashboard({ user, onLogout }: NeederDashboardProps) {
               <Badge className={getStatusColor(request.status)}>
                 {request.status.replace('-', ' ')}
               </Badge>
-              <Badge className={getUrgencyColor(request.urgency)}>
-                {request.urgency} priority
+              <Badge className={getUrgencyColor(request.priority)}>
+                {request.priority} priority
               </Badge>
             </div>
           </div>
@@ -393,26 +417,27 @@ export function NeederDashboard({ user, onLogout }: NeederDashboardProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="category">Category</Label>
-                    <Select value={newRequest.category} onValueChange={(value) => setNewRequest(prev => ({ ...prev, category: value }))}>
+                    <Select
+                      value={newRequest.category}
+                      onValueChange={(value) => setNewRequest((prev) => ({ ...prev, category: value }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Home Repair">Home Repair</SelectItem>
-                        <SelectItem value="Moving">Moving</SelectItem>
-                        <SelectItem value="Tech Support">Tech Support</SelectItem>
-                        <SelectItem value="Pet Care">Pet Care</SelectItem>
-                        <SelectItem value="Shopping">Shopping</SelectItem>
-                        <SelectItem value="Cleaning">Cleaning</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Transportation">Transportation</SelectItem>
+                        {categories.map((cat) => (
+                          console.log(cat._id, cat.name),
+                          <SelectItem key={cat._id} value={cat._id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <Label htmlFor="urgency">Priority</Label>
-                    <Select value={newRequest.urgency} onValueChange={(value) => setNewRequest(prev => ({ ...prev, urgency: value as any }))}>
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select value={newRequest.priority} onValueChange={(value) => setNewRequest(prev => ({ ...prev, priority: value as any }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
