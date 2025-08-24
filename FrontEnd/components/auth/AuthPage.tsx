@@ -27,17 +27,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  const handleAuth = () => {
-    if (selectedRole && formData.name && formData.email) {
-      onAuth({
-        id: Date.now().toString(),
-        name: formData.name,
-        role: selectedRole,
-      });
-    }
-  };
-
+  
   const handleLogin = async () => {
     if (!loginForm.email || !loginForm.password) {
       alert("Please enter email and password");
